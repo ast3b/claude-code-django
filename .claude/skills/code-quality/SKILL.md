@@ -1,11 +1,11 @@
 ---
-description: Run code quality checks on a directory
-allowed-tools: Read, Glob, Grep, Bash(uv:*)
+name: code-quality
+description: Run code quality checks (ruff lint, ruff format, pyright, pytest) on a directory and report findings by severity. Use when the user wants to audit code quality, check for type errors, lint issues, or run automated checks on a path. Accepts a directory path as argument. Triggers on requests like "check code quality", "run quality checks", "/code-quality apps/".
 ---
 
 # Code Quality Review
 
-Review code quality in: $ARGUMENTS
+Review code quality in the directory provided by the user.
 
 ## Instructions
 
@@ -15,10 +15,10 @@ Review code quality in: $ARGUMENTS
 
 2. **Run automated checks**:
    ```bash
-   uv run ruff check $ARGUMENTS
-   uv run ruff format --check $ARGUMENTS
-   uv run pyright $ARGUMENTS
-   uv run pytest $ARGUMENTS -v
+   uv run ruff check <directory>
+   uv run ruff format --check <directory>
+   uv run pyright <directory>
+   uv run pytest <directory> -v
    ```
 
 3. **Manual review checklist**:

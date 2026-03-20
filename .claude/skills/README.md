@@ -10,6 +10,16 @@ This directory contains project-specific skills that provide Claude with domain 
 | [skill-creator](./skill-creator/SKILL.md) | Guide for creating effective skills that extend Claude's capabilities |
 | [django-extensions](./django-extensions/SKILL.md) | Django-extensions management commands for introspection, debugging, and development |
 
+### Workflows
+| Skill | Description |
+|-------|-------------|
+| [onboard](./onboard/SKILL.md) | Onboard Claude to a new task by exploring the codebase and building context |
+| [ticket](./ticket/SKILL.md) | Work on a JIRA/Linear ticket end-to-end |
+| [pr-review](./pr-review/SKILL.md) | Review a pull request using project standards |
+| [pr-summary](./pr-summary/SKILL.md) | Generate a pull request summary for the current branch |
+| [code-quality](./code-quality/SKILL.md) | Run code quality checks and report findings by severity |
+| [docs-sync](./docs-sync/SKILL.md) | Check if documentation is in sync with code |
+
 ### Testing & Debugging
 | Skill | Description |
 |-------|-------------|

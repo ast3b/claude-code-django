@@ -6,7 +6,7 @@ Once you've got Claude Code set up, you can point it at your codebase, have it l
 
 ### What This Looks Like in Practice
 
-**Domain Knowledge Skills?** We have [9 specialized skills](.claude/skills/) covering everything from [Django models](.claude/skills/django-models/SKILL.md) and [forms](.claude/skills/django-forms/SKILL.md) to [HTMX patterns](.claude/skills/htmx-patterns/SKILL.md) and [Celery tasks](.claude/skills/celery-patterns/SKILL.md). When debugging, our [systematic debugging skill](.claude/skills/systematic-debugging/SKILL.md) ensures root cause analysis before fixes. Need to explore your Django project? Use [django-extensions](.claude/skills/django-extensions/SKILL.md). Want to create new skills? Follow the [skill-creator guide](.claude/skills/skill-creator/SKILL.md).
+**Domain Knowledge Skills?** We have [15 specialized skills](.claude/skills/) covering everything from [Django models](.claude/skills/django-models/SKILL.md) and [forms](.claude/skills/django-forms/SKILL.md) to [HTMX patterns](.claude/skills/htmx-patterns/SKILL.md) and [Celery tasks](.claude/skills/celery-patterns/SKILL.md). When debugging, our [systematic debugging skill](.claude/skills/systematic-debugging/SKILL.md) ensures root cause analysis before fixes. Need to explore your Django project? Use [django-extensions](.claude/skills/django-extensions/SKILL.md). Want to create new skills? Follow the [skill-creator guide](.claude/skills/skill-creator/SKILL.md).
 
 **Automated Quality Gates?** We use [hooks](.claude/settings.json) to auto-format code with Ruff, run tests when test files change, type-check with pyright, and even [block edits on the main branch](.claude/settings.md). The hooks catch issues like missing type hints, N+1 queries, and lint violations before they hit review.
 
@@ -21,7 +21,7 @@ Once you've got Claude Code set up, you can point it at your codebase, have it l
 
 A ton of maintenance and quality work is just... automated. It runs ridiculously smoothly.
 
-**JIRA/Linear Integration?** We connect Claude Code to our ticket system via [MCP servers](.mcp.json). Now Claude can read the ticket, understand the requirements, implement the feature, update the ticket status, and even create new tickets if it finds bugs along the way. The [`/ticket` command](.claude/commands/ticket.md) handles the entire workflow—from reading acceptance criteria to linking the PR back to the ticket.
+**JIRA/Linear Integration?** We connect Claude Code to our ticket system via [MCP servers](.mcp.json). Now Claude can read the ticket, understand the requirements, implement the feature, update the ticket status, and even create new tickets if it finds bugs along the way. The [`ticket` skill](.claude/skills/ticket/SKILL.md) handles the entire workflow—from reading acceptance criteria to linking the PR back to the ticket.
 
 We even use Claude Code for ticket triage. It reads the ticket, digs into the codebase, and leaves a comment with what it thinks should be done. So when an engineer picks it up, they're basically starting halfway through already.
 
@@ -41,7 +41,6 @@ We even use Claude Code for ticket triage. It reads the ticket, digs into the co
   - [Skill Evaluation Hooks](#skill-evaluation-hooks)
   - [Skills - Domain Knowledge](#skills---domain-knowledge)
   - [Agents - Specialized Assistants](#agents---specialized-assistants)
-  - [Commands - Slash Commands](#commands---slash-commands)
 - [GitHub Actions Workflows](#github-actions-workflows)
 - [Best Practices](#best-practices)
 - [Examples in This Repository](#examples-in-this-repository)
@@ -63,19 +62,18 @@ your-project/
 │   ├── agents/                    # Custom AI agents
 │   │   └── code-reviewer.md       # Proactive code review agent
 │   │
-│   ├── commands/                  # Slash commands (/command-name)
-│   │   ├── onboard.md             # Deep task exploration
-│   │   ├── pr-review.md           # PR review workflow
-│   │   └── ...
-│   │
 │   ├── hooks/                     # Hook scripts
 │   │   ├── skill-eval.sh          # Skill matching on prompt submit
 │   │   ├── skill-eval.js          # Node.js skill matching engine
 │   │   └── skill-rules.json       # Pattern matching configuration
 │   │
-│   ├── skills/                    # Domain knowledge documents
+│   ├── skills/                    # Domain knowledge + workflow skills
 │   │   ├── README.md              # Skills overview
 │   │   ├── skill-creator/
+│   │   │   └── SKILL.md
+│   │   ├── ticket/                # User-invocable workflow skills
+│   │   │   └── SKILL.md
+│   │   ├── pr-review/
 │   │   │   └── SKILL.md
 │   │   ├── django-extensions/
 │   │   │   └── SKILL.md
@@ -102,7 +100,7 @@ your-project/
 ### 1. Create the `.claude` directory
 
 ```bash
-mkdir -p .claude/{agents,commands,hooks,skills}
+mkdir -p .claude/{agents,hooks,skills}
 ```
 
 ### 2. Add a CLAUDE.md file
@@ -312,7 +310,7 @@ MCP servers run locally and provide Claude with tools to interact with external 
 - Create new tickets for bugs found during development
 - Link PRs to tickets
 
-**Example workflow with [`/ticket` command](.claude/commands/ticket.md):**
+**Example workflow with the [`ticket` skill](.claude/skills/ticket/SKILL.md):**
 ```
 You: /ticket PROJ-123
 
@@ -643,6 +641,16 @@ Skills are markdown documents that teach Claude project-specific patterns and co
 **Location:** `.claude/skills/{skill-name}/SKILL.md`
 
 **📄 Examples:**
+
+*Workflow skills (user-invocable):*
+- [ticket](.claude/skills/ticket/SKILL.md) - JIRA/Linear ticket end-to-end workflow
+- [onboard](.claude/skills/onboard/SKILL.md) - Deep task exploration and context building
+- [pr-review](.claude/skills/pr-review/SKILL.md) - PR review with project checklist
+- [pr-summary](.claude/skills/pr-summary/SKILL.md) - Generate PR description from branch diff
+- [code-quality](.claude/skills/code-quality/SKILL.md) - Run ruff, pyright, pytest and report findings
+- [docs-sync](.claude/skills/docs-sync/SKILL.md) - Verify docs match current code
+
+*Domain knowledge skills (auto-triggered):*
 - [skill-creator](.claude/skills/skill-creator/SKILL.md) - Guide for creating effective skills
 - [django-extensions](.claude/skills/django-extensions/SKILL.md) - Django-extensions management commands
 - [systematic-debugging](.claude/skills/systematic-debugging/SKILL.md) - Four-phase debugging methodology
@@ -658,9 +666,7 @@ Skills are markdown documents that teach Claude project-specific patterns and co
 | Field | Required | Max Length | Description |
 |-------|----------|------------|-------------|
 | `name` | **Yes** | 64 chars | Lowercase letters, numbers, and hyphens only. Should match directory name. |
-| `description` | **Yes** | 1024 chars | What the skill does and when to use it. Claude uses this to decide when to apply the skill. |
-| `allowed-tools` | No | - | Comma-separated list of tools Claude can use (e.g., `Read, Grep, Bash(npm:*)`). |
-| `model` | No | - | Specific model to use (e.g., `claude-sonnet-4-20250514`). |
+| `description` | **Yes** | 1024 chars | What the skill does and when to use it. Claude uses this to decide when to apply the skill. Include trigger keywords and user-invocation examples. |
 
 #### SKILL.md Format
 
@@ -668,8 +674,6 @@ Skills are markdown documents that teach Claude project-specific patterns and co
 ---
 name: skill-name
 description: What this skill does and when to use it. Include keywords users would mention.
-allowed-tools: Read, Grep, Glob
-model: claude-sonnet-4-20250514
 ---
 
 # Skill Title
@@ -758,48 +762,6 @@ You are a senior code reviewer...
 | `tools` | No | Comma-separated tool list |
 
 ---
-
-### Commands - Slash Commands
-
-Custom commands invoked with `/command-name`.
-
-**Location:** `.claude/commands/{command-name}.md`
-
-**📄 Examples:**
-- [onboard.md](.claude/commands/onboard.md) - Deep task exploration
-- [pr-review.md](.claude/commands/pr-review.md) - PR review workflow
-- [pr-summary.md](.claude/commands/pr-summary.md) - Generate PR description
-- [code-quality.md](.claude/commands/code-quality.md) - Quality checks
-- [docs-sync.md](.claude/commands/docs-sync.md) - Documentation alignment
-
-#### Command Format
-
-```markdown
----
-description: Brief description shown in command list
-allowed-tools: Bash(git:*), Read, Grep
----
-
-# Command Instructions
-
-Your task is to: $ARGUMENTS
-
-## Steps
-1. Do this first
-2. Then do this
-```
-
-#### Variables
-
-- `$ARGUMENTS` - All arguments as single string
-- `$1`, `$2`, `$3` - Individual positional arguments
-
-#### Inline Bash
-
-```markdown
-Current branch: !`git branch --show-current`
-Recent commits: !`git log --oneline -5`
-```
 
 ---
 
@@ -934,18 +896,18 @@ Commit everything except:
 | **Agents** | |
 | [.claude/agents/code-reviewer.md](.claude/agents/code-reviewer.md) | Comprehensive code review agent |
 | [.claude/agents/github-workflow.md](.claude/agents/github-workflow.md) | Git workflow agent |
-| **Commands** | |
-| [.claude/commands/onboard.md](.claude/commands/onboard.md) | Deep task exploration |
-| [.claude/commands/ticket.md](.claude/commands/ticket.md) | **JIRA/Linear ticket workflow (read → implement → update)** |
-| [.claude/commands/pr-review.md](.claude/commands/pr-review.md) | PR review workflow |
-| [.claude/commands/pr-summary.md](.claude/commands/pr-summary.md) | Generate PR summary |
-| [.claude/commands/code-quality.md](.claude/commands/code-quality.md) | Quality checks |
-| [.claude/commands/docs-sync.md](.claude/commands/docs-sync.md) | Documentation sync |
 | **Hooks** | |
 | [.claude/hooks/skill-eval.sh](.claude/hooks/skill-eval.sh) | Skill evaluation wrapper |
 | [.claude/hooks/skill-eval.js](.claude/hooks/skill-eval.js) | Node.js skill matching engine |
 | [.claude/hooks/skill-rules.json](.claude/hooks/skill-rules.json) | Pattern matching rules |
-| **Skills** | |
+| **Skills (workflow)** | |
+| [.claude/skills/ticket/SKILL.md](.claude/skills/ticket/SKILL.md) | **JIRA/Linear ticket workflow (read → implement → update)** |
+| [.claude/skills/onboard/SKILL.md](.claude/skills/onboard/SKILL.md) | Deep task exploration and context building |
+| [.claude/skills/pr-review/SKILL.md](.claude/skills/pr-review/SKILL.md) | PR review with project checklist |
+| [.claude/skills/pr-summary/SKILL.md](.claude/skills/pr-summary/SKILL.md) | Generate PR description from branch diff |
+| [.claude/skills/code-quality/SKILL.md](.claude/skills/code-quality/SKILL.md) | Run ruff, pyright, pytest and report findings |
+| [.claude/skills/docs-sync/SKILL.md](.claude/skills/docs-sync/SKILL.md) | Verify docs match current code |
+| **Skills (domain knowledge)** | |
 | [.claude/skills/skill-creator/SKILL.md](.claude/skills/skill-creator/SKILL.md) | Guide for creating effective skills |
 | [.claude/skills/django-extensions/SKILL.md](.claude/skills/django-extensions/SKILL.md) | Django-extensions management commands |
 | [.claude/skills/systematic-debugging/SKILL.md](.claude/skills/systematic-debugging/SKILL.md) | Four-phase debugging methodology |

@@ -81,6 +81,12 @@ Before implementing ANY task, check if relevant skills apply:
 - Debugging issues → `systematic-debugging` skill
 - Exploring Django project (models, URLs, settings) → `django-extensions` skill
 - Creating new skills → `skill-creator` skill
+- Starting a new task → `onboard` skill
+- Working a ticket → `ticket` skill
+- Reviewing a PR → `pr-review` skill
+- Summarizing branch changes → `pr-summary` skill
+- Running quality checks → `code-quality` skill
+- Checking docs accuracy → `docs-sync` skill
 
 ## Common Commands
 

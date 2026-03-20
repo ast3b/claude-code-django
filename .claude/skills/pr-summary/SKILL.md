@@ -1,6 +1,6 @@
 ---
-description: Generate a summary for the current branch changes
-allowed-tools: Bash(git:*)
+name: pr-summary
+description: Generate a pull request summary for the current branch changes. Use when the user wants to create a PR description, summarize branch changes, or prepare a PR body. Triggers on requests like "summarize my changes", "write a PR description", "what changed in this branch", "/pr-summary".
 ---
 
 # PR Summary
