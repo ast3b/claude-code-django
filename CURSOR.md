@@ -17,29 +17,34 @@ make sync-all-apply TARGET=/path/to/your-project
 ```
 
 What happens:
-- Creates `.cursor/rules/<skill-name>.mdc` for each skill
+- Creates `.cursor/rules/<skill-name>.mdc` for each skill (description + globs from `skill-rules.json`)
+- Creates `.cursor/rules/<rule-name>.mdc` for each `.claude/rules/*.md` in the target project (description + globs from `paths:` frontmatter)
 - Adds `.cursor/rules/` to the target project's `.gitignore` automatically
 - Re-running only updates files that have changed
 
 ## .mdc file structure
 
-```yaml
----
-description: Django model design patterns...   # from SKILL.md frontmatter
-globs: ["**/models.py", "**/models/*.py"]       # from skill-rules.json → pathPatterns
-alwaysApply: false
----
+Two sources generate `.mdc` files:
 
-# Django Model Patterns
-...                                             # SKILL.md body
-```
+**Skills** (upstream `.claude/skills/*/SKILL.md`):
 
 | Field | Source |
 |-------|--------|
-| `description` | `SKILL.md` frontmatter (upstream) |
+| `description` | `SKILL.md` frontmatter `description:` |
 | `globs` | `.claude/hooks/skill-rules.json` → `skills.<name>.triggers.pathPatterns` (target) |
 | `alwaysApply` | always `false` |
-| Body | `SKILL.md` body (upstream) |
+| Body | `SKILL.md` body |
+
+**Rules** (target `.claude/rules/*.md`):
+
+| Field | Source |
+|-------|--------|
+| `description` | rules file frontmatter `description:` |
+| `globs` | rules file frontmatter `paths:` block list |
+| `alwaysApply` | always `false` |
+| Body | rules file body |
+
+Upstream rules use the `core-` prefix (e.g., `core-testing.md`) to avoid name collision with project-specific rules.
 
 ## Updating
 

@@ -127,7 +127,7 @@ paths:
 ...
 ```
 
-See `.claude/rules/testing.md` for a complete example.
+See `.claude/rules/core-testing.md` for a complete example.
 
 ---
 
