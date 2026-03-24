@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Извлекает метаданные из SKILL.md frontmatter или skill-rules.json.
+"""Extract metadata from SKILL.md frontmatter or skill-rules.json.
 
-Использование:
+Usage:
   parse_skill_meta.py path/to/SKILL.md description
   parse_skill_meta.py path/to/skill-rules.json globs:django-models
 """

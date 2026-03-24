@@ -1,22 +1,22 @@
 #!/usr/bin/env bash
-# Синхронизирует .claude/ из этого upstream-репо в целевой проект.
+# Syncs .claude/ from this upstream repo into a target project.
 #
-# Использование:
-#   bash scripts/sync-to-project.sh                          # показать статус
-#   bash scripts/sync-to-project.sh --apply                  # применить
-#   bash scripts/sync-to-project.sh --cursor                 # статус + Cursor rules
-#   bash scripts/sync-to-project.sh --apply --cursor         # применить + Cursor rules
-#   bash scripts/sync-to-project.sh --target /path/to/proj   # указать цель явно
+# Usage:
+#   bash scripts/sync-to-project.sh                          # show status (dry run)
+#   bash scripts/sync-to-project.sh --apply                  # apply changes
+#   bash scripts/sync-to-project.sh --cursor                 # dry run + Cursor rules
+#   bash scripts/sync-to-project.sh --apply --cursor         # apply + Cursor rules
+#   bash scripts/sync-to-project.sh --target /path/to/proj   # specify target explicitly
 #   bash scripts/sync-to-project.sh --apply --target /path/to/proj
 #
-# Целевой проект определяется (в порядке приоритета):
+# Target project resolution (in order of priority):
 #   1. --target <path>
-#   2. Переменная окружения CLAUDE_SYNC_TARGET
-#   3. Файл .sync-target в корне этого репо
+#   2. CLAUDE_SYNC_TARGET environment variable
+#   3. .sync-target file in the repo root
 #
-# Файлы, которые НИКОГДА не перезаписываются в целевом проекте:
-#   .claude/settings.json          — содержит project-specific пути инструментов
-#   .claude/hooks/skill-rules.json — содержит project-specific директории и ключевые слова
+# Files that are NEVER overwritten in the target project:
+#   .claude/settings.json          — contains project-specific tool paths
+#   .claude/hooks/skill-rules.json — contains project-specific directories and keywords
 
 set -euo pipefail
 
@@ -25,29 +25,29 @@ APPLY=0
 CURSOR=0
 TARGET_DIR=""
 
-# Защищённые Cursor rules (не перезаписываются и не удаляются)
-# Настраивается через CLAUDE_PROTECTED_CURSOR_RULES="rule1 rule2"
+# Protected Cursor rules (never overwritten or deleted)
+# Configure via: CLAUDE_PROTECTED_CURSOR_RULES="rule1 rule2"
 PROTECTED_CURSOR=(${CLAUDE_PROTECTED_CURSOR_RULES:-})
 
-# --- разбор аргументов ---
+# --- argument parsing ---
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --apply)     APPLY=1; shift ;;
     --cursor)    CURSOR=1; shift ;;
     --no-cursor) CURSOR=0; shift ;;
     --target)    TARGET_DIR="$2"; shift 2 ;;
-    *) echo "Неизвестный аргумент: $1" >&2; exit 1 ;;
+    *) echo "Unknown argument: $1" >&2; exit 1 ;;
   esac
 done
 
-# --- preflight check: python3 нужен для генерации Cursor rules ---
+# --- preflight check: python3 is required for Cursor rules generation ---
 CURSOR_ENABLED=1
 if ! command -v python3 &>/dev/null; then
-  echo "WARN: python3 не найден — Cursor rules не будут сгенерированы" >&2
+  echo "WARN: python3 not found — Cursor rules will not be generated" >&2
   CURSOR_ENABLED=0
 fi
 
-# --- определение целевого проекта ---
+# --- resolve target project ---
 if [[ -z "$TARGET_DIR" ]]; then
   TARGET_DIR="${CLAUDE_SYNC_TARGET:-}"
 fi
@@ -55,9 +55,9 @@ if [[ -z "$TARGET_DIR" && -f "$REPO_ROOT/.sync-target" ]]; then
   TARGET_DIR="$(cat "$REPO_ROOT/.sync-target" | tr -d '[:space:]')"
 fi
 if [[ -z "$TARGET_DIR" ]]; then
-  echo "Ошибка: целевой проект не указан." >&2
+  echo "Error: target project not specified." >&2
   echo "" >&2
-  echo "Укажи цель одним из способов:" >&2
+  echo "Specify the target in one of these ways:" >&2
   echo "  1. bash scripts/sync-to-project.sh --target /path/to/project" >&2
   echo "  2. export CLAUDE_SYNC_TARGET=/path/to/project" >&2
   echo "  3. echo '/path/to/project' > .sync-target" >&2
@@ -67,14 +67,14 @@ fi
 TARGET_DIR="$(realpath "$TARGET_DIR")"
 
 if [[ ! -d "$TARGET_DIR" ]]; then
-  echo "Ошибка: директория не найдена: $TARGET_DIR" >&2
+  echo "Error: directory not found: $TARGET_DIR" >&2
   exit 1
 fi
 
 SRC="$REPO_ROOT/.claude"
 DST="$TARGET_DIR/.claude"
 
-# --- файлы, которые никогда не перезаписываются ---
+# --- files that are never overwritten ---
 PROTECTED=(
   "settings.json"
   "hooks/skill-rules.json"
@@ -84,13 +84,13 @@ echo "==> Upstream:  $REPO_ROOT"
 echo "==> Target:    $TARGET_DIR"
 echo ""
 
-# Проверяем, есть ли .claude/ в целевом проекте
+# Check if .claude/ exists in the target project
 if [[ ! -d "$DST" ]]; then
   if [[ $APPLY -eq 0 ]]; then
-    echo "В целевом проекте нет .claude/ — будет создана при --apply."
+    echo "Target has no .claude/ directory — will be created with --apply."
   else
     mkdir -p "$DST"
-    echo "Создана директория $DST"
+    echo "Created directory $DST"
   fi
 fi
 
@@ -98,7 +98,7 @@ UPDATED=0
 SKIPPED=0
 NEW=0
 
-# --- синхронизируемые поддиректории ---
+# --- directories to sync ---
 SYNC_DIRS=(
   "skills"
   "rules"
@@ -106,7 +106,7 @@ SYNC_DIRS=(
   "commands"
 )
 
-# --- синхронизируемые файлы из hooks/ (кроме защищённых) ---
+# --- individual hook files to sync (excluding protected) ---
 SYNC_HOOK_FILES=(
   "hooks/skill-eval.sh"
   "hooks/skill-eval.js"
@@ -123,7 +123,7 @@ is_protected() {
 }
 
 sync_file() {
-  local rel="$1"   # относительный путь внутри .claude/
+  local rel="$1"   # relative path inside .claude/
   local src="$SRC/$rel"
   local dst="$DST/$rel"
 
@@ -154,14 +154,14 @@ sync_file() {
 }
 
 sync_dir() {
-  local dir="$1"   # поддиректория внутри .claude/
+  local dir="$1"   # subdirectory inside .claude/
   local src_dir="$SRC/$dir"
 
   [[ ! -d "$src_dir" ]] && return 0
 
   while IFS= read -r -d '' src_file; do
     local rel="${dir}/${src_file#$src_dir/}"
-    # для директорий с вложенными файлами
+    # handle nested directories
     rel="${src_file#$SRC/}"
     sync_file "$rel"
   done < <(find "$src_dir" -type f -print0)
@@ -175,14 +175,14 @@ sync_cursor_rules() {
 
   echo "--- Cursor rules ---"
 
-  # --- генерация .mdc для каждого скилла ---
+  # --- generate .mdc for each skill ---
   for skill_dir in "$REPO_ROOT/.claude/skills"/*/; do
     local name
     name=$(basename "$skill_dir")
     local skill_md="$skill_dir/SKILL.md"
     [[ ! -f "$skill_md" ]] && continue
 
-    # Проверка защищённых
+    # check protected list
     local skip=0
     for p in "${PROTECTED_CURSOR[@]:-}"; do
       [[ "$name" == "$p" ]] && skip=1 && break
@@ -193,23 +193,23 @@ sync_cursor_rules() {
       continue
     fi
 
-    # description из SKILL.md frontmatter
+    # description from SKILL.md frontmatter
     local desc
     desc=$(python3 "$REPO_ROOT/scripts/parse_skill_meta.py" "$skill_md" description 2>/dev/null) \
-      || { echo "  WARN: не удалось прочитать $skill_md" >&2; continue; }
+      || { echo "  WARN: could not read $skill_md" >&2; continue; }
     [[ -z "$desc" ]] && desc="$name"
 
-    # globs из TARGET skill-rules.json
+    # globs from TARGET skill-rules.json
     local rules_json="$target/.claude/hooks/skill-rules.json"
     local globs="[]"
     if [[ -f "$rules_json" ]]; then
       globs=$(python3 "$REPO_ROOT/scripts/parse_skill_meta.py" "$rules_json" "globs:$name" 2>/dev/null) \
         || globs="[]"
     else
-      echo "  WARN: skill-rules.json не найден в $target, globs будут пустыми" >&2
+      echo "  WARN: skill-rules.json not found in $target, globs will be empty" >&2
     fi
 
-    # body SKILL.md (всё после второго ---)
+    # SKILL.md body (everything after the second ---)
     local body
     body=$(awk '/^---/{c++; next} c>=2{print}' "$skill_md")
 
@@ -231,7 +231,7 @@ sync_cursor_rules() {
     fi
   done
 
-  # --- очистка устаревших .mdc ---
+  # --- remove stale .mdc files ---
   if [[ -d "$target/.cursor/rules" ]]; then
     for mdc_file in "$target/.cursor/rules"/*.mdc; do
       [[ ! -f "$mdc_file" ]] && continue
@@ -243,16 +243,16 @@ sync_cursor_rules() {
       done
       [[ $protected -eq 1 ]] && continue
       if [[ ! -d "$REPO_ROOT/.claude/skills/$mdc_name" ]]; then
-        echo "  STALE (cursor): $mdc_name.mdc → удалено"
+        echo "  STALE (cursor): $mdc_name.mdc → removed"
         [[ $APPLY -eq 1 ]] && rm -f "$mdc_file"
       fi
     done
   fi
 
   echo ""
-  echo "Cursor rules: новых=$cursor_new, обновлено=$cursor_updated, защищённых=$cursor_skipped"
+  echo "Cursor rules: new=$cursor_new, updated=$cursor_updated, protected=$cursor_skipped"
 
-  # Убедиться что .cursor/rules/ в .gitignore (файлы не зависят от ветки)
+  # Ensure .cursor/rules/ is gitignored (files must be branch-independent)
   local gitignore="$target/.gitignore"
   local entry=".cursor/rules/"
   if ! grep -qxF "$entry" "$gitignore" 2>/dev/null; then
@@ -261,37 +261,37 @@ sync_cursor_rules() {
   fi
 }
 
-# --- синхронизация директорий ---
+# --- sync directories ---
 for d in "${SYNC_DIRS[@]}"; do
   sync_dir "$d"
 done
 
-# --- синхронизация отдельных файлов из hooks/ ---
+# --- sync individual hook files ---
 for f in "${SYNC_HOOK_FILES[@]}"; do
   sync_file "$f"
 done
 
 echo ""
 if [[ $APPLY -eq 0 ]]; then
-  echo "Статус: новых=$NEW, обновлений=$UPDATED, защищённых=$SKIPPED"
+  echo "Status: new=$NEW, updated=$UPDATED, protected=$SKIPPED"
   if [[ $CURSOR -eq 1 && $CURSOR_ENABLED -eq 1 ]]; then
     echo ""
     sync_cursor_rules "$TARGET_DIR"
   fi
   echo ""
-  echo "Запусти с --apply чтобы применить:"
+  echo "Run with --apply to apply changes:"
   echo "  bash scripts/sync-to-project.sh --apply"
   echo "  make sync-skills-apply"
   if [[ $CURSOR -eq 0 ]]; then
     echo ""
-    echo "Для генерации Cursor rules добавь --cursor:"
+    echo "Add --cursor to also generate Cursor rules:"
     echo "  make sync-all-apply"
   fi
 else
-  echo "Готово: новых=$NEW, обновлено=$UPDATED, защищённых=$SKIPPED"
+  echo "Done: new=$NEW, updated=$UPDATED, protected=$SKIPPED"
   if [[ $((NEW + UPDATED)) -gt 0 ]]; then
     echo ""
-    echo "Изменения применены в: $DST"
+    echo "Changes applied to: $DST"
   fi
   if [[ $CURSOR -eq 1 && $CURSOR_ENABLED -eq 1 ]]; then
     echo ""
