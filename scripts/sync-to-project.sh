@@ -253,57 +253,6 @@ sync_cursor_rules() {
   echo "Cursor rules: новых=$cursor_new, обновлено=$cursor_updated, защищённых=$cursor_skipped"
 }
 
-install_post_checkout_hook() {
-  local target="$1"
-  local upstream="$REPO_ROOT"
-  local git_dir="$target/.git"
-
-  # Работает только если target — git-репозиторий
-  [[ -d "$git_dir" ]] || return 0
-
-  local hook_file="$git_dir/hooks/post-checkout"
-  local marker="# claude-code-django:cursor-regen"
-
-  # Уже установлен — обновить upstream path если изменился
-  if [[ -f "$hook_file" ]] && grep -q "$marker" "$hook_file" 2>/dev/null; then
-    if ! grep -q ":-$upstream" "$hook_file" 2>/dev/null; then
-      sed -i "s|UPSTREAM=.*$marker|UPSTREAM=\"\${CLAUDE_SYNC_UPSTREAM:-$upstream}\" $marker|" "$hook_file"
-      echo "  UPDATED post-checkout hook (upstream path changed)"
-    fi
-    return 0
-  fi
-
-  # Генерируем тело хука
-  local hook_body
-  hook_body=$(cat << HOOKEOF
-$marker
-# Auto-regenerates .cursor/rules/ when skill-rules.json changes between branches.
-# To disable: remove the block between the two '$marker' lines.
-_CC_PREV="\$1" _CC_NEW="\$2" _CC_TYPE="\$3"
-if [[ "\$_CC_TYPE" == "0" ]]; then
-  UPSTREAM="\${CLAUDE_SYNC_UPSTREAM:-$upstream}" $marker
-  if [[ -x "\$UPSTREAM/scripts/sync-to-project.sh" ]]; then
-    _CC_TARGET="\$(git rev-parse --show-toplevel 2>/dev/null)"
-    bash "\$UPSTREAM/scripts/sync-to-project.sh" --cursor --apply --target "\$_CC_TARGET" >/dev/null 2>&1 &
-  fi
-fi
-$marker
-HOOKEOF
-)
-
-  if [[ -f "$hook_file" ]]; then
-    # Дописываем к существующему хуку
-    printf '\n%s\n' "$hook_body" >> "$hook_file"
-    echo "  APPENDED cursor-regen to existing post-checkout hook"
-  else
-    # Создаём новый хук
-    mkdir -p "$git_dir/hooks"
-    printf '#!/usr/bin/env bash\n%s\n' "$hook_body" > "$hook_file"
-    chmod +x "$hook_file"
-    echo "  INSTALLED post-checkout hook → $hook_file"
-  fi
-}
-
 # --- синхронизация директорий ---
 for d in "${SYNC_DIRS[@]}"; do
   sync_dir "$d"
@@ -339,6 +288,5 @@ else
   if [[ $CURSOR -eq 1 && $CURSOR_ENABLED -eq 1 ]]; then
     echo ""
     sync_cursor_rules "$TARGET_DIR"
-    install_post_checkout_hook "$TARGET_DIR"
   fi
 fi
