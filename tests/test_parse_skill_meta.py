@@ -44,6 +44,33 @@ class TestGetSkillMdField:
         assert result.returncode != 0
 
 
+class TestGetPathsList:
+    def test_block_yaml_returns_json_array(self, tmp_path):
+        f = tmp_path / "rule.md"
+        f.write_text('---\ndescription: My rule\npaths:\n  - "**/tests/**"\n  - "**/test_*"\n---\n\n# Body\n')
+        result = run(str(f), "paths")
+        assert result.returncode == 0
+        assert json.loads(result.stdout.strip()) == ["**/tests/**", "**/test_*"]
+
+    def test_empty_paths_field_returns_empty_array(self, tmp_path):
+        f = tmp_path / "rule.md"
+        f.write_text("---\ndescription: My rule\npaths:\n---\n\n# Body\n")
+        result = run(str(f), "paths")
+        assert result.returncode == 0
+        assert json.loads(result.stdout.strip()) == []
+
+    def test_no_paths_field_returns_empty_array(self, tmp_path):
+        f = tmp_path / "rule.md"
+        f.write_text("---\ndescription: My rule\n---\n\n# Body\n")
+        result = run(str(f), "paths")
+        assert result.returncode == 0
+        assert json.loads(result.stdout.strip()) == []
+
+    def test_file_not_found_exits_nonzero(self):
+        result = run("/nonexistent/path/rule.md", "paths")
+        assert result.returncode != 0
+
+
 class TestGetGlobs:
     def test_globs_found(self, tmp_path):
         rules = {

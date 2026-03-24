@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""Extract metadata from SKILL.md frontmatter or skill-rules.json.
+"""Extract metadata from SKILL.md/rules frontmatter or skill-rules.json.
 
 Usage:
   parse_skill_meta.py path/to/SKILL.md description
   parse_skill_meta.py path/to/skill-rules.json globs:django-models
+  parse_skill_meta.py path/to/rules/core-testing.md paths
 """
 import json
 import sys
@@ -28,6 +29,34 @@ def get_skill_md_field(path: str, field: str) -> str:
     return ""
 
 
+def get_paths_list(path: str) -> str:
+    try:
+        lines = open(path).readlines()
+    except IOError as e:
+        print(f"Error reading {path}: {e}", file=sys.stderr)
+        sys.exit(1)
+    in_front, count, in_paths = False, 0, False
+    patterns: list[str] = []
+    for line in lines:
+        if line.strip() == "---":
+            count += 1
+            in_front = count == 1
+            in_paths = False
+            if count == 2:
+                break
+            continue
+        if not in_front:
+            continue
+        if line.startswith("paths:"):
+            in_paths = True
+            continue
+        if in_paths and line.startswith("  - "):
+            patterns.append(line.strip().lstrip("- ").strip('"'))
+        elif in_paths:
+            in_paths = False
+    return json.dumps(patterns)
+
+
 def get_globs(rules_path: str, skill_name: str) -> str:
     try:
         d = json.load(open(rules_path))
@@ -47,5 +76,7 @@ def get_globs(rules_path: str, skill_name: str) -> str:
 path, query = sys.argv[1], sys.argv[2]
 if query.startswith("globs:"):
     print(get_globs(path, query.split(":", 1)[1]))
+elif query == "paths":
+    print(get_paths_list(path))
 else:
     print(get_skill_md_field(path, query))

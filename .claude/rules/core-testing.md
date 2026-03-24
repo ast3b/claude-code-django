@@ -1,4 +1,5 @@
 ---
+description: Testing patterns for Django — test levels, rules, and coverage targets
 paths:
   - "**/tests/**"
   - "**/test_*"

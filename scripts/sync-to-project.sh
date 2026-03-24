@@ -231,8 +231,63 @@ sync_cursor_rules() {
     fi
   done
 
+  # --- generate .mdc for each rules file in target ---
+  for rule_md in "$target/.claude/rules"/*.md; do
+    [[ ! -f "$rule_md" ]] && continue
+    local name
+    name=$(basename "$rule_md" .md)
+
+    local skip=0
+    for p in "${PROTECTED_CURSOR[@]:-}"; do
+      [[ "$name" == "$p" ]] && skip=1 && break
+    done
+    if [[ $skip -eq 1 ]]; then
+      echo "  PROTECTED (cursor/rule): $name"
+      cursor_skipped=$((cursor_skipped+1))
+      continue
+    fi
+
+    local desc
+    desc=$(python3 "$REPO_ROOT/scripts/parse_skill_meta.py" "$rule_md" description 2>/dev/null) \
+      || { echo "  WARN: could not read $rule_md" >&2; continue; }
+    [[ -z "$desc" ]] && desc="$name"
+
+    local globs
+    globs=$(python3 "$REPO_ROOT/scripts/parse_skill_meta.py" "$rule_md" paths 2>/dev/null) \
+      || globs="[]"
+
+    local body
+    body=$(awk '/^---/{c++; next} c>=2{print}' "$rule_md")
+
+    local dst="$target/.cursor/rules/$name.mdc"
+    local content
+    content=$(printf -- '---\ndescription: %s\nglobs: %s\nalwaysApply: false\n---\n%s' \
+      "$desc" "$globs" "$body")
+
+    if [[ ! -f "$dst" ]]; then
+      echo "  NEW (cursor/rule): $name.mdc"
+      [[ $APPLY -eq 1 ]] && printf '%s\n' "$content" > "$dst"
+      cursor_new=$((cursor_new+1))
+    elif [[ "$(cat "$dst")" != "$content" ]]; then
+      echo "  UPDATE (cursor/rule): $name.mdc"
+      [[ $APPLY -eq 1 ]] && printf '%s\n' "$content" > "$dst"
+      cursor_updated=$((cursor_updated+1))
+    else
+      echo "  OK (cursor/rule): $name.mdc"
+    fi
+  done
+
   # --- remove stale .mdc files ---
   if [[ -d "$target/.cursor/rules" ]]; then
+    # Build set of valid names from both skills and rules
+    declare -A valid_mdc_names
+    for _sd in "$REPO_ROOT/.claude/skills"/*/; do
+      [[ -d "$_sd" ]] && valid_mdc_names[$(basename "$_sd")]=1
+    done
+    for _rm in "$target/.claude/rules"/*.md; do
+      [[ -f "$_rm" ]] && valid_mdc_names[$(basename "$_rm" .md)]=1
+    done
+
     for mdc_file in "$target/.cursor/rules"/*.mdc; do
       [[ ! -f "$mdc_file" ]] && continue
       local mdc_name
@@ -242,7 +297,7 @@ sync_cursor_rules() {
         [[ "$mdc_name" == "$p" ]] && protected=1 && break
       done
       [[ $protected -eq 1 ]] && continue
-      if [[ ! -d "$REPO_ROOT/.claude/skills/$mdc_name" ]]; then
+      if [[ -z "${valid_mdc_names[$mdc_name]+_}" ]]; then
         echo "  STALE (cursor): $mdc_name.mdc → removed"
         [[ $APPLY -eq 1 ]] && rm -f "$mdc_file"
       fi
