@@ -26,3 +26,4 @@ Thumbs.db
 .claude/tasks/
 CLAUDE.local.md
 *~
+tests/__pycache__

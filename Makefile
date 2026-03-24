@@ -12,10 +12,16 @@
 
 TARGET ?=
 
-.PHONY: sync-skills sync-skills-apply
+.PHONY: sync-skills sync-skills-apply sync-all sync-all-apply
 
 sync-skills:  ## Показать статус синхронизации (без изменений)
 	@bash scripts/sync-to-project.sh $(if $(TARGET),--target "$(TARGET)",)
 
 sync-skills-apply:  ## Синхронизировать .claude/ в целевой проект
 	@bash scripts/sync-to-project.sh --apply $(if $(TARGET),--target "$(TARGET)",)
+
+sync-all:  ## Dry run: скиллы + Cursor rules
+	@bash scripts/sync-to-project.sh --cursor $(if $(TARGET),--target "$(TARGET)",)
+
+sync-all-apply:  ## Применить: скиллы + Cursor rules
+	@bash scripts/sync-to-project.sh --apply --cursor $(if $(TARGET),--target "$(TARGET)",)

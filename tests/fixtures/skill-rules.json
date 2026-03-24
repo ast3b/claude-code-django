@@ -1,0 +1,9 @@
+{
+  "skills": {
+    "django-models": {
+      "triggers": {
+        "pathPatterns": ["**/models.py", "**/models/*.py"]
+      }
+    }
+  }
+}
