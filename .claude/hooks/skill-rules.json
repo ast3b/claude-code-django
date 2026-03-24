@@ -21,20 +21,23 @@
     "templates/": "django-templates",
     "tests/": "pytest-django-patterns",
     "tasks/": "celery-patterns",
-    "forms/": "django-forms"
+    "forms/": "django-forms",
+    "partials/": "htmx-alpine-patterns"
   },
   "skills": {
     "pytest-django-patterns": {
       "description": "pytest-django testing patterns and TDD workflow",
       "priority": 9,
       "triggers": {
-        "keywords": ["test", "pytest", "fixture", "factory", "mock", "tdd"],
+        "keywords": ["test", "pytest", "fixture", "factory", "mock", "tdd", "тест", "тестирование"],
         "keywordPatterns": ["\\btest(?:s|ing)?\\b", "\\bspec\\b", "\\bfixture\\b"],
         "pathPatterns": ["**/test_*.py", "**/*_test.py", "**/conftest.py", "**/factories.py"],
         "intentPatterns": [
           "(?:write|add|create|fix).*(?:test)",
           "(?:test).*(?:for|the)",
-          "(?:red.green.refactor|tdd)"
+          "(?:red.green.refactor|tdd)",
+          "(?:написать|добавить|создать).*(?:тест)",
+          "(?:тест).*(?:для|проверить)"
         ],
         "contentPatterns": ["@pytest", "def test_", "Factory", "pytest.mark"]
       },
@@ -44,13 +47,14 @@
       "description": "Django form handling with validation",
       "priority": 7,
       "triggers": {
-        "keywords": ["form", "modelform", "validation", "clean", "widget"],
+        "keywords": ["form", "modelform", "validation", "clean", "widget", "форма", "валидация"],
         "keywordPatterns": ["\\bform(?:s)?\\b", "Form\\b", "\\bvalidat(?:e|ion)\\b"],
         "pathPatterns": ["**/forms.py", "**/forms/*.py"],
         "intentPatterns": [
           "(?:create|build|add).*(?:form)",
           "(?:form).*(?:validation|submit|field)",
-          "(?:validat(?:e|ion)).*(?:schema|rule)"
+          "(?:validat(?:e|ion)).*(?:schema|rule)",
+          "(?:создать|добавить).*(?:форму|форма)"
         ],
         "contentPatterns": ["forms.Form", "ModelForm", "clean_", "is_valid"]
       },
@@ -60,12 +64,13 @@
       "description": "HTMX patterns for dynamic Django templates",
       "priority": 7,
       "triggers": {
-        "keywords": ["htmx", "hx-", "partial", "ajax", "dynamic"],
+        "keywords": ["htmx", "hx-", "partial", "ajax", "dynamic", "партиал"],
         "keywordPatterns": ["\\bhtmx\\b", "\\bhx-\\w+\\b", "\\bpartial\\b"],
         "pathPatterns": ["**/templates/**/_*.html", "**/partials/**"],
         "intentPatterns": [
           "(?:add|create).*(?:htmx|dynamic|ajax)",
-          "(?:htmx).*(?:request|swap|trigger)"
+          "(?:htmx).*(?:request|swap|trigger)",
+          "(?:partial|партиал).*(?:template|шаблон)"
         ],
         "contentPatterns": ["hx-get", "hx-post", "hx-target", "hx-swap", "HX-Request"]
       }
@@ -74,7 +79,7 @@
       "description": "Django template inheritance and patterns",
       "priority": 6,
       "triggers": {
-        "keywords": ["template", "html", "extends", "block", "include"],
+        "keywords": ["template", "html", "extends", "block", "include", "шаблон"],
         "keywordPatterns": ["\\btemplate\\b", "\\bhtml\\b"],
         "pathPatterns": ["**/templates/**/*.html"],
         "intentPatterns": [
@@ -88,26 +93,31 @@
       "description": "Celery task patterns and async processing",
       "priority": 7,
       "triggers": {
-        "keywords": ["celery", "task", "async", "background", "queue", "worker"],
+        "keywords": ["celery", "task", "async", "background", "queue", "worker", "beat", "periodic", "периодическая задача"],
         "keywordPatterns": ["\\bcelery\\b", "\\btask\\b", "\\basync\\b", "\\.delay\\("],
         "pathPatterns": ["**/tasks.py", "**/tasks/*.py", "**/celery.py"],
         "intentPatterns": [
           "(?:create|add).*(?:task|background)",
-          "(?:async|background).*(?:job|process)"
+          "(?:async|background).*(?:job|process)",
+          "(?:periodic|scheduled).*(?:task|job)"
         ],
-        "contentPatterns": ["@shared_task", "@celery", ".delay(", ".apply_async"]
+        "contentPatterns": ["@shared_task", "@celery", ".delay(", ".apply_async", "crontab"]
       }
     },
     "django-models": {
       "description": "Django model design and QuerySet optimization",
       "priority": 7,
       "triggers": {
-        "keywords": ["model", "queryset", "migration", "orm", "database", "query"],
-        "keywordPatterns": ["\\bmodel\\b", "\\bqueryset\\b", "\\bmigration\\b"],
+        "keywords": ["model", "queryset", "migration", "orm", "database", "query", "модель", "миграция"],
+        "keywordPatterns": [
+          "\\bmodel\\b", "\\bqueryset\\b", "\\bmigration\\b",
+          "select_related", "prefetch_related", "N\\+1"
+        ],
         "pathPatterns": ["**/models.py", "**/models/*.py", "**/migrations/*.py"],
         "intentPatterns": [
           "(?:create|add|design).*(?:model)",
-          "(?:optimize|fix).*(?:query|n\\+1)"
+          "(?:optimize|fix).*(?:query|n\\+1)",
+          "(?:select_related|prefetch_related)"
         ],
         "contentPatterns": ["models.Model", "models.CharField", "objects.filter", "select_related"]
       }
@@ -116,12 +126,13 @@
       "description": "Four-phase debugging with root cause analysis",
       "priority": 9,
       "triggers": {
-        "keywords": ["bug", "debug", "fix", "error", "issue", "broken", "failing"],
-        "keywordPatterns": ["\\bbug\\b", "\\bfix\\b", "\\berror\\b", "\\bissue\\b", "doesn't work", "not working"],
+        "keywords": ["bug", "debug", "fix", "error", "issue", "broken", "failing", "баг", "ошибка", "не работает"],
+        "keywordPatterns": ["\\bbug\\b", "\\bfix\\b", "\\berror\\b", "\\bissue\\b", "doesn't work", "not working", "не работает"],
         "intentPatterns": [
           "(?:fix|debug|resolve|investigate).*(?:bug|error|issue|problem)",
           "(?:why).*(?:not working|broken|failing)",
-          "(?:something).*(?:wrong|broken)"
+          "(?:something).*(?:wrong|broken)",
+          "(?:почему|разобраться).*(?:не работает|ошибка|баг)"
         ]
       },
       "excludePatterns": ["fix typo", "fix formatting", "fix lint"]
@@ -151,6 +162,33 @@
           "merge.*(?:to|into).*(?:master|main)",
           "(?:done|finished).*worktree",
           "we.re done"
+        ]
+      }
+    },
+    "docs-sync": {
+      "description": "Verify documentation matches current code",
+      "priority": 5,
+      "triggers": {
+        "keywords": ["docs", "documentation", "readme", "outdated", "sync", "документация"],
+        "keywordPatterns": ["\\bdoc(?:s|umentation)?\\b", "\\breadme\\b"],
+        "pathPatterns": ["**/docs/**", "**/DOCS/**", "**/*.md", "**/README*"],
+        "intentPatterns": [
+          "(?:check|sync|update).*(?:docs|documentation)",
+          "(?:docs|documentation).*(?:outdated|accurate|match)",
+          "(?:проверить|обновить).*(?:документация|документацию)"
+        ]
+      }
+    },
+    "pr-summary": {
+      "description": "Generate pull request description from branch changes",
+      "priority": 5,
+      "triggers": {
+        "keywords": ["pr", "pull request", "merge request", "pr description", "pr summary"],
+        "keywordPatterns": ["\\bpr\\b", "pull.request", "merge.request"],
+        "intentPatterns": [
+          "(?:create|write|generate).*(?:pr|pull request|merge request)",
+          "(?:summarize|describe).*(?:changes|branch|diff)",
+          "(?:pr|pull request).*(?:description|body|summary)"
         ]
       }
     },
