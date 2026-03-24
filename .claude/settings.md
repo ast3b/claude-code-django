@@ -48,6 +48,20 @@
    - **Command**: `uv run ruff check`
    - **Behavior**: Shows first 20 lines of issues only, non-blocking, exit 0
 
+## Adapting for pip + virtualenv (non-uv projects)
+
+If your project uses pip + `.venv` instead of `uv`, replace all `uv run X` commands with direct venv paths:
+
+| Hook | uv (default) | pip + venv |
+|------|-------------|------------|
+| Ruff format | `uv run ruff format "$FILE"` | `"$CLAUDE_PROJECT_DIR"/.venv/bin/ruff format "$FILE"` |
+| Ruff check | `uv run ruff check "$FILE"` | `"$CLAUDE_PROJECT_DIR"/.venv/bin/ruff check "$FILE"` |
+| Pyright | `uv run pyright "$FILE"` | `"$CLAUDE_PROJECT_DIR"/.venv/bin/pyright "$FILE"` |
+| pytest | `uv run pytest "$FILE" -x -q` | `cd "$CLAUDE_PROJECT_DIR" && .venv/bin/pytest "$FILE" -x -q` |
+| Dependency install | trigger: `pyproject.toml\|requirements*.txt`, cmd: `uv sync` | trigger: `requirements*.txt`, cmd: `cd "$CLAUDE_PROJECT_DIR" && .venv/bin/pip install -r requirements.txt -q` |
+
+---
+
 ## Hook Response Format
 
 ```json
