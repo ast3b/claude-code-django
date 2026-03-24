@@ -251,6 +251,14 @@ sync_cursor_rules() {
 
   echo ""
   echo "Cursor rules: новых=$cursor_new, обновлено=$cursor_updated, защищённых=$cursor_skipped"
+
+  # Убедиться что .cursor/rules/ в .gitignore (файлы не зависят от ветки)
+  local gitignore="$target/.gitignore"
+  local entry=".cursor/rules/"
+  if ! grep -qxF "$entry" "$gitignore" 2>/dev/null; then
+    printf '\n# Cursor rules (auto-generated, do not commit)\n%s\n' "$entry" >> "$gitignore"
+    echo "  Added '$entry' to .gitignore"
+  fi
 }
 
 # --- синхронизация директорий ---
