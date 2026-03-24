@@ -109,7 +109,7 @@ else
   fail "rules file → my-rule.mdc not created"
 fi
 
-if grep -q 'description: My custom rule' "$RULE_MDC" 2>/dev/null; then
+if grep -q 'description: "My custom rule"' "$RULE_MDC" 2>/dev/null; then
   ok "rules .mdc: description from frontmatter"
 else
   fail "rules .mdc: description not from frontmatter"
@@ -154,6 +154,24 @@ if [[ -f "$TARGET5/.cursor/rules/my-persistent-rule.mdc" ]]; then
   ok "stale check: rules-derived .mdc not deleted when rule file exists"
 else
   fail "stale check: rules-derived .mdc was wrongly deleted"
+fi
+
+# --- Test 6: stale check DOES delete orphaned .mdc (no matching skill or rule) ---
+TARGET6=$(mktemp -d)
+trap "rm -rf '$TARGET' '$TARGET2' '$TARGET3' '$TARGET4' '$TARGET5' '$TARGET6'" EXIT
+
+mkdir -p "$TARGET6/.claude/hooks" "$TARGET6/.claude/rules" "$TARGET6/.cursor/rules"
+cp "$REPO_ROOT/tests/fixtures/skill-rules.json" "$TARGET6/.claude/hooks/"
+
+# Pre-create an orphaned .mdc with no matching skill dir or rule file
+echo "orphan" > "$TARGET6/.cursor/rules/removed-skill.mdc"
+
+bash "$SCRIPT" --cursor --apply --target "$TARGET6" > /dev/null
+
+if [[ ! -f "$TARGET6/.cursor/rules/removed-skill.mdc" ]]; then
+  ok "stale check: orphaned .mdc deleted"
+else
+  fail "stale check: orphaned .mdc not deleted"
 fi
 
 # --- Summary ---

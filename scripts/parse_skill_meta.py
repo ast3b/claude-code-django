@@ -48,10 +48,14 @@ def get_paths_list(path: str) -> str:
         if not in_front:
             continue
         if line.startswith("paths:"):
+            # Only block-style YAML lists are supported (  - "pattern").
+            # Inline lists (paths: ["..."]) are not parsed.
             in_paths = True
             continue
         if in_paths and line.startswith("  - "):
-            patterns.append(line.strip().lstrip("- ").strip('"'))
+            item = line.strip()
+            item = item[2:] if item.startswith("- ") else item
+            patterns.append(item.strip('"').strip("'"))
         elif in_paths:
             in_paths = False
     return json.dumps(patterns)

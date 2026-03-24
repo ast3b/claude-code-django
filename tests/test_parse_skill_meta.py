@@ -66,6 +66,13 @@ class TestGetPathsList:
         assert result.returncode == 0
         assert json.loads(result.stdout.strip()) == []
 
+    def test_single_quoted_values_stripped(self, tmp_path):
+        f = tmp_path / "rule.md"
+        f.write_text("---\npaths:\n  - '**/tests/**'\n  - '**/test_*'\n---\n")
+        result = run(str(f), "paths")
+        assert result.returncode == 0
+        assert json.loads(result.stdout.strip()) == ["**/tests/**", "**/test_*"]
+
     def test_file_not_found_exits_nonzero(self):
         result = run("/nonexistent/path/rule.md", "paths")
         assert result.returncode != 0

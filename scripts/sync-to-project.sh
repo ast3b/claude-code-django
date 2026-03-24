@@ -215,7 +215,7 @@ sync_cursor_rules() {
 
     local dst="$target/.cursor/rules/$name.mdc"
     local content
-    content=$(printf -- '---\ndescription: %s\nglobs: %s\nalwaysApply: false\n---\n%s' \
+    content=$(printf -- '---\ndescription: "%s"\nglobs: %s\nalwaysApply: false\n---\n%s' \
       "$desc" "$globs" "$body")
 
     if [[ ! -f "$dst" ]]; then
@@ -261,7 +261,7 @@ sync_cursor_rules() {
 
     local dst="$target/.cursor/rules/$name.mdc"
     local content
-    content=$(printf -- '---\ndescription: %s\nglobs: %s\nalwaysApply: false\n---\n%s' \
+    content=$(printf -- '---\ndescription: "%s"\nglobs: %s\nalwaysApply: false\n---\n%s' \
       "$desc" "$globs" "$body")
 
     if [[ ! -f "$dst" ]]; then
