@@ -10,14 +10,18 @@ import json
 import sys
 
 
-def get_skill_md_field(path: str, field: str) -> str:
+def _read_lines(path: str) -> list[str]:
     try:
-        lines = open(path).readlines()
-    except IOError as e:
+        with open(path) as f:
+            return f.readlines()
+    except (IOError, UnicodeDecodeError) as e:
         print(f"Error reading {path}: {e}", file=sys.stderr)
         sys.exit(1)
+
+
+def get_skill_md_field(path: str, field: str) -> str:
     in_front, count = False, 0
-    for line in lines:
+    for line in _read_lines(path):
         if line.strip() == "---":
             count += 1
             in_front = count == 1
@@ -30,14 +34,9 @@ def get_skill_md_field(path: str, field: str) -> str:
 
 
 def get_paths_list(path: str) -> str:
-    try:
-        lines = open(path).readlines()
-    except IOError as e:
-        print(f"Error reading {path}: {e}", file=sys.stderr)
-        sys.exit(1)
     in_front, count, in_paths = False, 0, False
     patterns: list[str] = []
-    for line in lines:
+    for line in _read_lines(path):
         if line.strip() == "---":
             count += 1
             in_front = count == 1
@@ -53,8 +52,7 @@ def get_paths_list(path: str) -> str:
             in_paths = True
             continue
         if in_paths and line.startswith("  - "):
-            item = line.strip()
-            item = item[2:] if item.startswith("- ") else item
+            item = line.strip()[2:]
             patterns.append(item.strip('"').strip("'"))
         elif in_paths:
             in_paths = False
@@ -63,7 +61,8 @@ def get_paths_list(path: str) -> str:
 
 def get_globs(rules_path: str, skill_name: str) -> str:
     try:
-        d = json.load(open(rules_path))
+        with open(rules_path) as f:
+            d = json.load(f)
     except IOError as e:
         print(f"Error reading {rules_path}: {e}", file=sys.stderr)
         sys.exit(1)

@@ -10,9 +10,11 @@ FAIL=0
 ok()   { echo "  OK: $*";   PASS=$((PASS+1)); }
 fail() { echo "  FAIL: $*" >&2; FAIL=$((FAIL+1)); }
 
+CLEANUP=()
+trap 'rm -rf "${CLEANUP[@]}"' EXIT
+
 # --- Test 1: --cursor --apply creates .mdc files ---
-TARGET=$(mktemp -d)
-trap "rm -rf '$TARGET'" EXIT
+TARGET=$(mktemp -d); CLEANUP+=("$TARGET")
 
 mkdir -p "$TARGET/.claude/hooks"
 cp "$REPO_ROOT/tests/fixtures/skill-rules.json" "$TARGET/.claude/hooks/"
@@ -51,8 +53,7 @@ else
 fi
 
 # --- Test 2: dry-run does NOT write files ---
-TARGET2=$(mktemp -d)
-trap "rm -rf '$TARGET' '$TARGET2'" EXIT
+TARGET2=$(mktemp -d); CLEANUP+=("$TARGET2")
 
 mkdir -p "$TARGET2/.claude/hooks"
 cp "$REPO_ROOT/tests/fixtures/skill-rules.json" "$TARGET2/.claude/hooks/"
@@ -66,8 +67,7 @@ else
 fi
 
 # --- Test 3: without --cursor, no .cursor/rules created ---
-TARGET3=$(mktemp -d)
-trap "rm -rf '$TARGET' '$TARGET2' '$TARGET3'" EXIT
+TARGET3=$(mktemp -d); CLEANUP+=("$TARGET3")
 
 mkdir -p "$TARGET3/.claude/hooks"
 cp "$REPO_ROOT/tests/fixtures/skill-rules.json" "$TARGET3/.claude/hooks/"
@@ -81,8 +81,7 @@ else
 fi
 
 # --- Test 4: rules/*.md → .mdc (globs from paths:, description from frontmatter) ---
-TARGET4=$(mktemp -d)
-trap "rm -rf '$TARGET' '$TARGET2' '$TARGET3' '$TARGET4'" EXIT
+TARGET4=$(mktemp -d); CLEANUP+=("$TARGET4")
 
 mkdir -p "$TARGET4/.claude/hooks" "$TARGET4/.claude/rules"
 cp "$REPO_ROOT/tests/fixtures/skill-rules.json" "$TARGET4/.claude/hooks/"
@@ -128,8 +127,7 @@ else
 fi
 
 # --- Test 5: stale check does NOT delete rules-derived .mdc when rule exists ---
-TARGET5=$(mktemp -d)
-trap "rm -rf '$TARGET' '$TARGET2' '$TARGET3' '$TARGET4' '$TARGET5'" EXIT
+TARGET5=$(mktemp -d); CLEANUP+=("$TARGET5")
 
 mkdir -p "$TARGET5/.claude/hooks" "$TARGET5/.claude/rules" "$TARGET5/.cursor/rules"
 cp "$REPO_ROOT/tests/fixtures/skill-rules.json" "$TARGET5/.claude/hooks/"
@@ -157,8 +155,7 @@ else
 fi
 
 # --- Test 6: stale check DOES delete orphaned .mdc (no matching skill or rule) ---
-TARGET6=$(mktemp -d)
-trap "rm -rf '$TARGET' '$TARGET2' '$TARGET3' '$TARGET4' '$TARGET5' '$TARGET6'" EXIT
+TARGET6=$(mktemp -d); CLEANUP+=("$TARGET6")
 
 mkdir -p "$TARGET6/.claude/hooks" "$TARGET6/.claude/rules" "$TARGET6/.cursor/rules"
 cp "$REPO_ROOT/tests/fixtures/skill-rules.json" "$TARGET6/.claude/hooks/"
@@ -172,6 +169,29 @@ if [[ ! -f "$TARGET6/.cursor/rules/removed-skill.mdc" ]]; then
   ok "stale check: orphaned .mdc deleted"
 else
   fail "stale check: orphaned .mdc not deleted"
+fi
+
+# --- Test 7: CLAUDE_PROTECTED_CURSOR_RULES skips protected skill ---
+TARGET7=$(mktemp -d); CLEANUP+=("$TARGET7")
+
+mkdir -p "$TARGET7/.claude/hooks"
+cp "$REPO_ROOT/tests/fixtures/skill-rules.json" "$TARGET7/.claude/hooks/"
+
+CLAUDE_PROTECTED_CURSOR_RULES="django-models" \
+  bash "$SCRIPT" --cursor --apply --target "$TARGET7" > /dev/null
+
+if [[ ! -f "$TARGET7/.cursor/rules/django-models.mdc" ]]; then
+  ok "protected: django-models.mdc not created when protected"
+else
+  fail "protected: django-models.mdc was created despite protection"
+fi
+
+# Verify sync still ran (other skills were created)
+OTHER_MDC=$(find "$TARGET7/.cursor/rules" -name "*.mdc" ! -name "django-models.mdc" 2>/dev/null | head -1)
+if [[ -n "$OTHER_MDC" ]]; then
+  ok "protected: sync ran — other .mdc files exist (protection ≠ total failure)"
+else
+  fail "protected: no other .mdc files found — sync may have failed entirely"
 fi
 
 # --- Summary ---
