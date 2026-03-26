@@ -29,6 +29,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 └── skills/                # Domain knowledge skills (SKILL.md per skill)
 .github/workflows/         # Scheduled and PR-triggered Claude Code workflows
 .envrc                     # direnv config for worktree environment sharing
+SKILLS.md                  # Full index of available skills with combinations
 ```
 
 ## Active Hooks (settings.json)
@@ -74,6 +75,19 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Write failing test first (TDD)
 - Use Factory Boy: `UserFactory.create(is_admin=True)`
 - Test behavior, not implementation
+
+## Current Adaptation: e-rent/admin (venv)
+
+This upstream repo has been adapted for a specific target project (`e-rent/admin`) that uses **pip + virtualenv** instead of `uv`. Forks should be aware of these intentional deviations:
+
+| File | Default (uv) | This repo (venv) |
+|------|-------------|-----------------|
+| `skills/django-extensions/SKILL.md` | `uv run python manage.py` | `python manage.py` |
+| `commands/fix.md` | `uv run pyright` | `ty check` |
+
+The `CLAUDE.md` commands (this file) and `settings.json` hooks still document `uv run` as the **default template** — adapt them when forking.
+
+---
 
 ## Forking & Customization
 
@@ -132,6 +146,8 @@ See `.claude/rules/core-testing.md` for a complete example.
 ---
 
 ## Skill Activation
+
+See `SKILLS.md` for the full skill index with category tables and recommended combinations.
 
 Before implementing ANY task, check if relevant skills apply:
 
