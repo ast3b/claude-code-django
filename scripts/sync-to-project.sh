@@ -167,6 +167,36 @@ sync_dir() {
   done < <(find "$src_dir" -type f -print0)
 }
 
+is_cursor_protected() {
+  local name="$1"
+  [[ ${#PROTECTED_CURSOR[@]} -eq 0 ]] && return 1
+  for p in "${PROTECTED_CURSOR[@]}"; do
+    [[ "$name" == "$p" ]] && return 0
+  done
+  return 1
+}
+
+write_mdc_file() {
+  # write_mdc_file <name> <desc> <globs> <body> <dst> <label>
+  # Modifies caller's cursor_new / cursor_updated (bash dynamic scoping).
+  local name="$1" desc="$2" globs="$3" body="$4" dst="$5" label="$6"
+  local content
+  content=$(printf -- '---\ndescription: "%s"\nglobs: %s\nalwaysApply: false\n---\n%s' \
+    "$desc" "$globs" "$body")
+
+  if [[ ! -f "$dst" ]]; then
+    echo "  NEW ($label): $name.mdc"
+    [[ $APPLY -eq 1 ]] && printf '%s\n' "$content" > "$dst"
+    cursor_new=$((cursor_new+1))
+  elif ! diff -q <(printf '%s\n' "$content") "$dst" > /dev/null 2>&1; then
+    echo "  UPDATE ($label): $name.mdc"
+    [[ $APPLY -eq 1 ]] && printf '%s\n' "$content" > "$dst"
+    cursor_updated=$((cursor_updated+1))
+  else
+    echo "  OK ($label): $name.mdc"
+  fi
+}
+
 sync_cursor_rules() {
   local target="$1"
   [[ $APPLY -eq 1 ]] && mkdir -p "$target/.cursor/rules"
@@ -182,24 +212,17 @@ sync_cursor_rules() {
     local skill_md="$skill_dir/SKILL.md"
     [[ ! -f "$skill_md" ]] && continue
 
-    # check protected list
-    local skip=0
-    for p in "${PROTECTED_CURSOR[@]:-}"; do
-      [[ "$name" == "$p" ]] && skip=1 && break
-    done
-    if [[ $skip -eq 1 ]]; then
+    if is_cursor_protected "$name"; then
       echo "  PROTECTED (cursor): $name"
       cursor_skipped=$((cursor_skipped+1))
       continue
     fi
 
-    # description from SKILL.md frontmatter
     local desc
     desc=$(python3 "$REPO_ROOT/scripts/parse_skill_meta.py" "$skill_md" description 2>/dev/null) \
       || { echo "  WARN: could not read $skill_md" >&2; continue; }
     [[ -z "$desc" ]] && desc="$name"
 
-    # globs from TARGET skill-rules.json
     local rules_json="$target/.claude/hooks/skill-rules.json"
     local globs="[]"
     if [[ -f "$rules_json" ]]; then
@@ -209,26 +232,11 @@ sync_cursor_rules() {
       echo "  WARN: skill-rules.json not found in $target, globs will be empty" >&2
     fi
 
-    # SKILL.md body (everything after the second ---)
     local body
     body=$(awk '/^---/{c++; next} c>=2{print}' "$skill_md")
 
-    local dst="$target/.cursor/rules/$name.mdc"
-    local content
-    content=$(printf -- '---\ndescription: "%s"\nglobs: %s\nalwaysApply: false\n---\n%s' \
-      "$desc" "$globs" "$body")
-
-    if [[ ! -f "$dst" ]]; then
-      echo "  NEW (cursor): $name.mdc"
-      [[ $APPLY -eq 1 ]] && printf '%s\n' "$content" > "$dst"
-      cursor_new=$((cursor_new+1))
-    elif [[ "$(cat "$dst")" != "$content" ]]; then
-      echo "  UPDATE (cursor): $name.mdc"
-      [[ $APPLY -eq 1 ]] && printf '%s\n' "$content" > "$dst"
-      cursor_updated=$((cursor_updated+1))
-    else
-      echo "  OK (cursor): $name.mdc"
-    fi
+    write_mdc_file "$name" "$desc" "$globs" "$body" \
+      "$target/.cursor/rules/$name.mdc" "cursor"
   done
 
   # --- generate .mdc for each rules file in target ---
@@ -237,11 +245,7 @@ sync_cursor_rules() {
     local name
     name=$(basename "$rule_md" .md)
 
-    local skip=0
-    for p in "${PROTECTED_CURSOR[@]:-}"; do
-      [[ "$name" == "$p" ]] && skip=1 && break
-    done
-    if [[ $skip -eq 1 ]]; then
+    if is_cursor_protected "$name"; then
       echo "  PROTECTED (cursor/rule): $name"
       cursor_skipped=$((cursor_skipped+1))
       continue
@@ -259,27 +263,12 @@ sync_cursor_rules() {
     local body
     body=$(awk '/^---/{c++; next} c>=2{print}' "$rule_md")
 
-    local dst="$target/.cursor/rules/$name.mdc"
-    local content
-    content=$(printf -- '---\ndescription: "%s"\nglobs: %s\nalwaysApply: false\n---\n%s' \
-      "$desc" "$globs" "$body")
-
-    if [[ ! -f "$dst" ]]; then
-      echo "  NEW (cursor/rule): $name.mdc"
-      [[ $APPLY -eq 1 ]] && printf '%s\n' "$content" > "$dst"
-      cursor_new=$((cursor_new+1))
-    elif [[ "$(cat "$dst")" != "$content" ]]; then
-      echo "  UPDATE (cursor/rule): $name.mdc"
-      [[ $APPLY -eq 1 ]] && printf '%s\n' "$content" > "$dst"
-      cursor_updated=$((cursor_updated+1))
-    else
-      echo "  OK (cursor/rule): $name.mdc"
-    fi
+    write_mdc_file "$name" "$desc" "$globs" "$body" \
+      "$target/.cursor/rules/$name.mdc" "cursor/rule"
   done
 
   # --- remove stale .mdc files ---
   if [[ -d "$target/.cursor/rules" ]]; then
-    # Build set of valid names from both skills and rules
     declare -A valid_mdc_names
     for _sd in "$REPO_ROOT/.claude/skills"/*/; do
       [[ -d "$_sd" ]] && valid_mdc_names[$(basename "$_sd")]=1
@@ -292,11 +281,7 @@ sync_cursor_rules() {
       [[ ! -f "$mdc_file" ]] && continue
       local mdc_name
       mdc_name=$(basename "$mdc_file" .mdc)
-      local protected=0
-      for p in "${PROTECTED_CURSOR[@]:-}"; do
-        [[ "$mdc_name" == "$p" ]] && protected=1 && break
-      done
-      [[ $protected -eq 1 ]] && continue
+      is_cursor_protected "$mdc_name" && continue
       if [[ -z "${valid_mdc_names[$mdc_name]+_}" ]]; then
         echo "  STALE (cursor): $mdc_name.mdc → removed"
         [[ $APPLY -eq 1 ]] && rm -f "$mdc_file"
