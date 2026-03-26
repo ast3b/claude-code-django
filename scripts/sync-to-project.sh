@@ -80,6 +80,10 @@ PROTECTED=(
   "hooks/skill-rules.json"
 )
 
+# --- skills that are never synced (e.g. replaced by an official plugin) ---
+# Configure via: CLAUDE_SKIP_SKILLS="skill-creator other-skill"
+SKIP_SKILLS=(${CLAUDE_SKIP_SKILLS:-} skill-creator)
+
 echo "==> Upstream:  $REPO_ROOT"
 echo "==> Target:    $TARGET_DIR"
 echo ""
@@ -122,12 +126,24 @@ is_protected() {
   return 1
 }
 
+is_skipped_skill() {
+  local rel="$1"
+  for s in "${SKIP_SKILLS[@]}"; do
+    [[ "$rel" == "skills/$s" || "$rel" == "skills/$s/"* ]] && return 0
+  done
+  return 1
+}
+
 sync_file() {
   local rel="$1"   # relative path inside .claude/
   local src="$SRC/$rel"
   local dst="$DST/$rel"
 
   [[ ! -f "$src" ]] && return 0
+
+  if is_skipped_skill "$rel"; then
+    return 0
+  fi
 
   if is_protected "$rel"; then
     echo "  PROTECTED (skip): $rel"
@@ -164,7 +180,7 @@ sync_dir() {
     # handle nested directories
     rel="${src_file#$SRC/}"
     sync_file "$rel"
-  done < <(find "$src_dir" -type f -print0)
+  done < <(find "$src_dir" -type f -not -path '*/__pycache__/*' -not -name '*.pyc' -print0)
 }
 
 is_cursor_protected() {
@@ -211,6 +227,10 @@ sync_cursor_rules() {
     name=$(basename "$skill_dir")
     local skill_md="$skill_dir/SKILL.md"
     [[ ! -f "$skill_md" ]] && continue
+
+    if is_skipped_skill "skills/$name"; then
+      continue
+    fi
 
     if is_cursor_protected "$name"; then
       echo "  PROTECTED (cursor): $name"
@@ -271,7 +291,10 @@ sync_cursor_rules() {
   if [[ -d "$target/.cursor/rules" ]]; then
     declare -A valid_mdc_names
     for _sd in "$REPO_ROOT/.claude/skills"/*/; do
-      [[ -d "$_sd" ]] && valid_mdc_names[$(basename "$_sd")]=1
+      [[ -d "$_sd" ]] || continue
+      local _sn; _sn=$(basename "$_sd")
+      is_skipped_skill "skills/$_sn" && continue
+      valid_mdc_names[$_sn]=1
     done
     for _rm in "$target/.claude/rules"/*.md; do
       [[ -f "$_rm" ]] && valid_mdc_names[$(basename "$_rm" .md)]=1

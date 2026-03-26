@@ -76,6 +76,34 @@ SKILLS.md                  # Full index of available skills with combinations
 - Use Factory Boy: `UserFactory.create(is_admin=True)`
 - Test behavior, not implementation
 
+## Syncing to a Target Project
+
+```bash
+# One-time: set the target project path
+echo '/path/to/your-project' > .sync-target
+
+# Check what would change (dry run)
+make sync-skills
+
+# Apply: sync .claude/ to the target project
+make sync-skills-apply
+
+# Apply + generate Cursor rules (.cursor/rules/*.mdc)
+make sync-all-apply
+```
+
+Pass `TARGET=` to override `.sync-target` for a single run:
+
+```bash
+make sync-skills-apply TARGET=/path/to/your-project
+```
+
+**Never overwritten** in the target project:
+- `.claude/settings.json` — tool runner paths (venv vs uv)
+- `.claude/hooks/skill-rules.json` — project-specific keywords and directories
+
+---
+
 ## Current Adaptation: e-rent/admin (venv)
 
 This upstream repo has been adapted for a specific target project (`e-rent/admin`) that uses **pip + virtualenv** instead of `uv`. Forks should be aware of these intentional deviations:

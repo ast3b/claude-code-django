@@ -194,6 +194,28 @@ else
   fail "protected: no other .mdc files found — sync may have failed entirely"
 fi
 
+# --- Test 8: SKIP_SKILLS excludes skill from sync ---
+TARGET8=$(mktemp -d); CLEANUP+=("$TARGET8")
+
+mkdir -p "$TARGET8/.claude/hooks"
+cp "$REPO_ROOT/tests/fixtures/skill-rules.json" "$TARGET8/.claude/hooks/"
+
+bash "$SCRIPT" --apply --target "$TARGET8" > /dev/null
+
+if [[ ! -d "$TARGET8/.claude/skills/skill-creator" ]]; then
+  ok "skip: skill-creator not synced (hardcoded in SKIP_SKILLS)"
+else
+  fail "skip: skill-creator was synced but should be excluded"
+fi
+
+# Verify other skills were still synced
+OTHER_SKILL=$(find "$TARGET8/.claude/skills" -name "SKILL.md" ! -path "*/skill-creator/*" 2>/dev/null | head -1)
+if [[ -n "$OTHER_SKILL" ]]; then
+  ok "skip: other skills were still synced"
+else
+  fail "skip: no other skills found — sync may have failed entirely"
+fi
+
 # --- Summary ---
 echo ""
 echo "Results: $PASS passed, $FAIL failed"
